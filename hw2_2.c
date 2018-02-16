@@ -5,17 +5,18 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
-#define NUMINTS  (1000)
-#define FILESIZE (NUMINTS * sizeof(int))
 
 int numOfLines;
 
 int main(int argc, char * argv[]) {
     
-    int opt, fd, i;
+    struct stat statBuff;
+    int opt, fd;
     int lineCount = 0;
     char* filename = argv[argc-1];
     char *map;
+    
+    char c = *(filename);
     
     while((opt = getopt(argc, argv, "n:")) != -1) {
         switch(opt) {
@@ -38,7 +39,7 @@ int main(int argc, char * argv[]) {
         exit(EXIT_FAILURE);
     }
     
-    map = mmap(0, FILESIZE, PROT_READ, MAP_SHARED, fd, 0);
+    map = mmap(0, statBuff.st_size, PROT_READ, MAP_SHARED, fd, 0);
     
     if(map == MAP_FAILED)
     {
@@ -46,19 +47,19 @@ int main(int argc, char * argv[]) {
         exit(EXIT_FAILURE);
     }
     
-    for(i=0; i < NUMINTS; ++i)
-    {
-        char c = map[i];
+    int i=0;
+    while (i < statBuff.st_size) {
+        c = map[i];
         
         if(c == '\n') ++lineCount;
         
         if(lineCount == numOfLines) break;
         
         printf("%c", c);
-        
+        i++;
     }
     
-    if(munmap(map, FILESIZE) == -1)
+    if(munmap(map, statBuff.st_size) == -1)
     {
         perror("Error un-mapping the file");
         
