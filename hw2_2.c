@@ -10,13 +10,10 @@ int numOfLines;
 
 int main(int argc, char * argv[]) {
     
-    struct stat statBuff;
     int opt, fd;
-    int lineCount = 0;
     char* filename = argv[argc-1];
     char *map;
-    
-    char c = *(filename);
+    off_t fileSize;
     
     while((opt = getopt(argc, argv, "n:")) != -1) {
         switch(opt) {
@@ -30,7 +27,7 @@ int main(int argc, char * argv[]) {
         }
         
     }
-    
+
     fd = open(filename, O_RDONLY);
     
     if(fd == -1)
@@ -39,7 +36,9 @@ int main(int argc, char * argv[]) {
         exit(EXIT_FAILURE);
     }
     
-    map = mmap(0, statBuff.st_size, PROT_READ, MAP_SHARED, fd, 0);
+    fileSize = lseek(fd, 0, SEEK_END);
+    
+    map = mmap(0, fileSize, PROT_READ, MAP_SHARED, fd, 0);
     
     if(map == MAP_FAILED)
     {
@@ -48,21 +47,24 @@ int main(int argc, char * argv[]) {
     }
     
     int i=0;
-    while (i < statBuff.st_size) {
-        c = map[i];
+    
+    while (i < fileSize) {
         
-        if(c == '\n') ++lineCount;
+        lseek(fd, 0, SEEK_SET);
         
-        if(lineCount == numOfLines) break;
+        if(map[i] == '\n' && numOfLines > 0)
+            --numOfLines;
         
-        printf("%c", c);
-        i++;
+        printf("%c", map[i]);
+        
+        if(numOfLines == 0) break;
+        
+        ++i;
     }
     
-    if(munmap(map, statBuff.st_size) == -1)
+    if(munmap(map, fileSize) == -1)
     {
         perror("Error un-mapping the file");
-        
     }
     
     close(fd);
